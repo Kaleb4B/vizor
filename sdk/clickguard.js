@@ -2,7 +2,7 @@
   'use strict';
 
   // Default Cloudflare Tunnel endpoint for live ingestion
-  var DEFAULT_ENDPOINT = 'https://scales-common-consequences-acquired.trycloudflare.com/api/events';
+  var DEFAULT_ENDPOINT = 'https://leading-cached-before-biological.trycloudflare.com/api/events';
 
   var ClickGuard = {
     websiteId: null,
