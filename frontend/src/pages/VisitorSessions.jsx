@@ -64,7 +64,7 @@ export default function VisitorSessions() {
             </thead>
             <tbody className="divide-y divide-amber-500/10 font-sans">
               {sessions.map((s, idx) => (
-                <tr key={s.session_id || idx} className="hover:bg-amber-500/5 transition duration-150">
+                <tr key={`${s.session_id || 'sess'}-${idx}`} className="hover:bg-amber-500/5 transition duration-150">
                   <td className="p-4 font-mono font-medium text-amber-300 text-[11px]">{s.session_id}</td>
                   <td className="p-4 font-mono text-slate-300">
                     {s.ip_address} <span className="text-amber-400">({s.country})</span>

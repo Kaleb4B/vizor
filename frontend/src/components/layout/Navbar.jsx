@@ -22,9 +22,7 @@ export default function Navbar() {
     refetchInterval: 15000,
   });
 
-  const liveCount = summaryData?.data?.live_visitors !== undefined 
-    ? summaryData.data.live_visitors 
-    : 0;
+  const liveCount = summaryData?.data?.live_visitors ?? 0;
 
   const alerts = alertsData?.data || [];
 

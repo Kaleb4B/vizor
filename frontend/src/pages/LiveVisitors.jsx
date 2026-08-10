@@ -22,10 +22,12 @@ export default function LiveVisitors() {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['live-visitors'],
     queryFn: () => visitorsAPI.list(),
-    refetchInterval: 10000, // Auto-refresh every 10s
+    refetchInterval: 5000, // Auto-refresh every 5s
   });
 
   const visitors = data?.data || [];
+  // Active Signals = total unique rows returned from the live feed
+  const activeSignalCount = visitors.length;
 
   const filtered = visitors.filter(v => {
     if (filter === 'HUMAN' && (v.is_bot || v.is_fraud)) return false;
@@ -43,7 +45,7 @@ export default function LiveVisitors() {
             Live Visitors Feed
             <span className="flex items-center gap-1.5 text-xs bg-amber-500/15 text-amber-300 font-mono font-bold px-3 py-1 rounded-full border border-amber-500/30 animate-pulse-glow">
               <Radio className="w-3.5 h-3.5 text-amber-400" />
-              {visitors.length} Active Signals
+              {activeSignalCount} Active Signals
             </span>
           </h1>
           <p className="text-sm text-amber-200/50 mt-1 font-sans">
@@ -111,7 +113,7 @@ export default function LiveVisitors() {
               </thead>
               <tbody className="divide-y divide-amber-500/10 font-sans">
                 {filtered.map((v, idx) => (
-                  <tr key={v.session_id || idx} className="hover:bg-amber-500/5 transition duration-150">
+                  <tr key={`${v.session_id || 'sess'}-${idx}`} className="hover:bg-amber-500/5 transition duration-150">
                     <td className="p-4 font-mono font-semibold text-amber-300">{v.ip_address}</td>
                     <td className="p-4 font-medium">
                       <span className="text-white">{v.country}</span>

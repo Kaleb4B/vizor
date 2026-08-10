@@ -2,7 +2,7 @@
 
 const router = require('express').Router();
 const { authenticate } = require('../middleware/auth');
-const { getDashboardSummary, getTimeseriesData } = require('../services/clickhouse.service');
+const { getDashboardSummary, getTimeseriesData, getAlerts, periodToHours } = require('../services/clickhouse.service');
 
 router.get('/summary', authenticate, async (req, res, next) => {
   try {
@@ -17,7 +17,8 @@ router.get('/summary', authenticate, async (req, res, next) => {
 
 router.get('/timeseries', authenticate, async (req, res, next) => {
   try {
-    const hours = req.query.period === '7d' ? 168 : req.query.period === '6h' ? 6 : 24;
+    const period = req.query.period || '24h';
+    const hours = periodToHours(period);
     const data = await getTimeseriesData(hours);
     res.json({ success: true, data });
   } catch (err) {
@@ -27,7 +28,8 @@ router.get('/timeseries', authenticate, async (req, res, next) => {
 
 router.get('/alerts', authenticate, async (req, res, next) => {
   try {
-    res.json({ success: true, data: [] });
+    const data = await getAlerts();
+    res.json({ success: true, data });
   } catch (err) {
     next(err);
   }
