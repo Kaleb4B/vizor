@@ -3,7 +3,6 @@
 const router = require('express').Router();
 const { authenticate } = require('../middleware/auth');
 const { getDashboardSummary, getTimeseriesData } = require('../services/clickhouse.service');
-const mock = require('../utils/mockData');
 
 router.get('/summary', authenticate, async (req, res, next) => {
   try {
@@ -19,8 +18,7 @@ router.get('/summary', authenticate, async (req, res, next) => {
 router.get('/timeseries', authenticate, async (req, res, next) => {
   try {
     const hours = req.query.period === '7d' ? 168 : req.query.period === '6h' ? 6 : 24;
-    const realData = await getTimeseriesData(hours);
-    const data = realData.length > 0 ? realData : mock.generateMockTimeseriesData(hours);
+    const data = await getTimeseriesData(hours);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -29,8 +27,7 @@ router.get('/timeseries', authenticate, async (req, res, next) => {
 
 router.get('/alerts', authenticate, async (req, res, next) => {
   try {
-    const data = mock.generateMockAlerts();
-    res.json({ success: true, data });
+    res.json({ success: true, data: [] });
   } catch (err) {
     next(err);
   }

@@ -3,13 +3,11 @@
 const router = require('express').Router();
 const { authenticate } = require('../middleware/auth');
 const { getFraudEvents } = require('../services/clickhouse.service');
-const mock = require('../utils/mockData');
 
 router.get('/', authenticate, async (req, res, next) => {
   try {
     const limit = parseInt(req.query.limit) || 30;
-    const realData = await getFraudEvents(limit);
-    const data = realData.length > 0 ? realData : mock.generateMockFraudEvents();
+    const data = await getFraudEvents(limit);
     res.json({ success: true, data });
   } catch (err) {
     next(err);

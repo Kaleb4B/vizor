@@ -3,7 +3,6 @@
 const router = require('express').Router();
 const { authenticate } = require('../middleware/auth');
 const { getGeoData, getDeviceData, getCampaignData } = require('../services/clickhouse.service');
-const mock = require('../utils/mockData');
 
 router.get('/', authenticate, async (req, res, next) => {
   try {
@@ -12,11 +11,7 @@ router.get('/', authenticate, async (req, res, next) => {
     const campaign = await getCampaignData();
     res.json({
       success: true,
-      data: {
-        geo: geo.length > 0 ? geo : mock.generateMockGeoData(),
-        device: device.devices?.length > 0 ? device : mock.generateMockDeviceData(),
-        campaign: campaign.length > 0 ? campaign : mock.generateMockCampaignData(),
-      }
+      data: { geo, device, campaign }
     });
   } catch (err) {
     next(err);
@@ -25,8 +20,7 @@ router.get('/', authenticate, async (req, res, next) => {
 
 router.get('/geo', authenticate, async (req, res, next) => {
   try {
-    const realData = await getGeoData();
-    const data = realData.length > 0 ? realData : mock.generateMockGeoData();
+    const data = await getGeoData();
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -35,8 +29,7 @@ router.get('/geo', authenticate, async (req, res, next) => {
 
 router.get('/device', authenticate, async (req, res, next) => {
   try {
-    const realData = await getDeviceData();
-    const data = realData.devices?.length > 0 ? realData : mock.generateMockDeviceData();
+    const data = await getDeviceData();
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -45,8 +38,7 @@ router.get('/device', authenticate, async (req, res, next) => {
 
 router.get('/campaign', authenticate, async (req, res, next) => {
   try {
-    const realData = await getCampaignData();
-    const data = realData.length > 0 ? realData : mock.generateMockCampaignData();
+    const data = await getCampaignData();
     res.json({ success: true, data });
   } catch (err) {
     next(err);
