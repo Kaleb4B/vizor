@@ -39,13 +39,13 @@ export default function Dashboard() {
   const { data: summaryData, isLoading: summaryLoading } = useQuery({
     queryKey: ['dashboard-summary', period, activeSite?.id],
     queryFn: () => dashboardAPI.summary(period, activeSite?.id),
-    refetchInterval: 30000,
+    refetchInterval: 3000,
   });
 
   const { data: timeseriesData, isLoading: chartLoading } = useQuery({
     queryKey: ['dashboard-timeseries', period, activeSite?.id],
     queryFn: () => dashboardAPI.timeseries(period, activeSite?.id),
-    refetchInterval: 60000,
+    refetchInterval: 5000,
   });
 
   const { data: alertsData } = useQuery({

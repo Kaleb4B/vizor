@@ -13,7 +13,7 @@ export default function Navbar() {
   const { data: summaryData } = useQuery({
     queryKey: ['navbar-summary', activeSite?.id],
     queryFn: () => dashboardAPI.summary(period, activeSite?.id),
-    refetchInterval: 10000,
+    refetchInterval: 3000,
   });
 
   const { data: alertsData } = useQuery({
