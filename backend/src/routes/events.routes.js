@@ -5,6 +5,7 @@ const { authenticateApiKey } = require('../middleware/auth');
 const { scoreEvent } = require('../services/scoring.service');
 const { publishEvent } = require('../config/kafka');
 const { insertEvents } = require('../config/clickhouse');
+const { emitToSite, emitAlert } = require('../config/socket');
 const { AppError } = require('../middleware/errorHandler');
 const { v4: uuidv4 } = require('uuid');
 
@@ -67,6 +68,20 @@ router.post('/', authenticateApiKey, async (req, res, next) => {
     await insertEvents(scored).catch(err => console.error('[ClickHouse Insert Error]:', err));
     for (const ev of scored) {
       await publishEvent(ev).catch(() => {});
+      const siteId = ev.site_id || 'site-001';
+      emitToSite(siteId, 'visitor:activity', ev);
+      emitToSite(siteId, 'visitor:new', ev);
+      if (ev.is_bot || ev.is_fraud || ev.bot_score >= 60) {
+        emitAlert(siteId, {
+          type: ev.is_fraud ? 'FRAUD_DETECTED' : 'BOT_DETECTED',
+          severity: ev.bot_score >= 80 ? 'CRITICAL' : 'HIGH',
+          message: ev.fraud_reason || ev.anomaly_reason || 'Suspicious traffic activity',
+          ip_address: ev.ip_address,
+          country: ev.country,
+          bot_score: ev.bot_score,
+          timestamp: ev.timestamp
+        });
+      }
     }
 
     res.status(202).json({
@@ -135,7 +150,21 @@ router.get('/pixel', async (req, res) => {
 
       insertEvents(scored).catch(err => console.error('[ClickHouse Insert Error]:', err));
       for (const ev of scored) {
-        publishEvent(ev).catch(() => {});
+        await publishEvent(ev).catch(() => {});
+        const siteId = ev.site_id || 'site-001';
+        emitToSite(siteId, 'visitor:activity', ev);
+        emitToSite(siteId, 'visitor:new', ev);
+        if (ev.is_bot || ev.is_fraud || ev.bot_score >= 60) {
+          emitAlert(siteId, {
+            type: ev.is_fraud ? 'FRAUD_DETECTED' : 'BOT_DETECTED',
+            severity: ev.bot_score >= 80 ? 'CRITICAL' : 'HIGH',
+            message: ev.fraud_reason || ev.anomaly_reason || 'Suspicious traffic activity',
+            ip_address: ev.ip_address,
+            country: ev.country,
+            bot_score: ev.bot_score,
+            timestamp: ev.timestamp
+          });
+        }
       }
     }
   } catch (e) {}

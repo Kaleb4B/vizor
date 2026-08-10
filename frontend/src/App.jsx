@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
+import { io } from 'socket.io-client';
 import Layout from './components/layout/Layout';
 import Dashboard from './pages/Dashboard';
 import LiveVisitors from './pages/LiveVisitors';
@@ -21,19 +22,44 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 2,
-      staleTime: 30000, // 30s cache
-      refetchOnWindowFocus: false,
+      staleTime: 1000, // 1s stale time for live responsiveness
+      refetchOnWindowFocus: true,
     },
   },
 });
 
 function AppContent() {
   const autoLogin = useAppStore(s => s.autoLogin);
+  const qc = useQueryClient();
 
-  // Auto-login on mount
+  // Auto-login & Socket.io setup on mount
   useEffect(() => {
     autoLogin();
-  }, [autoLogin]);
+
+    // Connect to Socket.io backend for 0ms latency updates
+    const socket = io('/', { transports: ['websocket', 'polling'] });
+    socket.emit('subscribe_site', 'site-001');
+
+    const handleRealtimeEvent = () => {
+      qc.invalidateQueries({ queryKey: ['live-visitors'] });
+      qc.invalidateQueries({ queryKey: ['dashboard-summary'] });
+      qc.invalidateQueries({ queryKey: ['dashboard-alerts'] });
+      qc.invalidateQueries({ queryKey: ['dashboard-timeseries'] });
+    };
+
+    socket.on('visitor:activity', handleRealtimeEvent);
+    socket.on('visitor:new', handleRealtimeEvent);
+    socket.on('alert', handleRealtimeEvent);
+    socket.on('stats:update', handleRealtimeEvent);
+
+    return () => {
+      socket.off('visitor:activity', handleRealtimeEvent);
+      socket.off('visitor:new', handleRealtimeEvent);
+      socket.off('alert', handleRealtimeEvent);
+      socket.off('stats:update', handleRealtimeEvent);
+      socket.disconnect();
+    };
+  }, [autoLogin, qc]);
 
   return (
     <Router>

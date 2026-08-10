@@ -22,7 +22,7 @@ export default function LiveVisitors() {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['live-visitors'],
     queryFn: () => visitorsAPI.list(),
-    refetchInterval: 5000, // Auto-refresh every 5s
+    refetchInterval: 2000, // Auto-refresh every 2s
   });
 
   const visitors = data?.data || [];

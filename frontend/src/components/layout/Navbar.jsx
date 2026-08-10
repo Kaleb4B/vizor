@@ -19,7 +19,7 @@ export default function Navbar() {
   const { data: alertsData } = useQuery({
     queryKey: ['navbar-alerts'],
     queryFn: () => dashboardAPI.alerts(),
-    refetchInterval: 15000,
+    refetchInterval: 3000,
   });
 
   const liveCount = summaryData?.data?.live_visitors ?? 0;

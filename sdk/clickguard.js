@@ -10,7 +10,7 @@
     visitorId: null,
     endpoint: DEFAULT_ENDPOINT,
     buffer: [],
-    flushInterval: 3000,
+    flushInterval: 1000,
     startTime: Date.now(),
     signals: {
       mouseMovementCount: 0,
