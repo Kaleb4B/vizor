@@ -1,11 +1,32 @@
 import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { dashboardAPI, visitorsAPI } from '../../services/api';
 import { useAppStore } from '../../store/useAppStore';
 import { Globe, Bell, ChevronDown, Radio, ShieldCheck, User } from 'lucide-react';
 
 export default function Navbar() {
-  const { activeSite, sites, setActiveSite, period, setPeriod, liveVisitorsCount, alerts } = useAppStore();
+  const { activeSite, sites, setActiveSite, period, setPeriod } = useAppStore();
   const [siteDropdownOpen, setSiteDropdownOpen] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
+
+  // Fetch real-time live signals count & alerts from API
+  const { data: summaryData } = useQuery({
+    queryKey: ['navbar-summary', activeSite?.id],
+    queryFn: () => dashboardAPI.summary(period, activeSite?.id),
+    refetchInterval: 10000,
+  });
+
+  const { data: alertsData } = useQuery({
+    queryKey: ['navbar-alerts'],
+    queryFn: () => dashboardAPI.alerts(),
+    refetchInterval: 15000,
+  });
+
+  const liveCount = summaryData?.data?.live_visitors !== undefined 
+    ? summaryData.data.live_visitors 
+    : 0;
+
+  const alerts = alertsData?.data || [];
 
   return (
     <header className="h-16 bg-[#08090f]/80 backdrop-blur-2xl border-b border-amber-500/15 fixed top-0 right-0 left-64 z-20 px-6 flex items-center justify-between shadow-xl">
@@ -49,10 +70,10 @@ export default function Navbar() {
 
       {/* Center & Right Controls */}
       <div className="flex items-center space-x-4">
-        {/* Live Visitor Indicator */}
+        {/* Live Visitor Indicator from API */}
         <div className="flex items-center space-x-2 bg-amber-500/10 border border-amber-500/30 px-3.5 py-1.5 rounded-full text-xs font-semibold text-amber-300 shadow-sm shadow-amber-500/10">
           <Radio className="w-3.5 h-3.5 text-amber-400 animate-pulse-glow" />
-          <span className="font-mono">{liveVisitorsCount} Live Signals</span>
+          <span className="font-mono">{liveCount} Live Signals</span>
         </div>
 
         {/* Time Period Selector */}
