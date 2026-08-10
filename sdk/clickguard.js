@@ -234,5 +234,12 @@
     }
   };
 
+  // Auto-init fallback if not manually initialized within 500ms
+  setTimeout(function () {
+    if (!ClickGuard.websiteId) {
+      ClickGuard.init({ websiteId: 'site-001' });
+    }
+  }, 500);
+
   window.ClickGuard = ClickGuard;
 })(window, document);
