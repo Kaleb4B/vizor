@@ -39,9 +39,11 @@ router.post('/', authenticateApiKey, async (req, res, next) => {
       };
     });
 
-    // Publish to Kafka (non-blocking)
+    // Publish to Kafka & direct insert to ClickHouse
+    const { insertEvents } = require('../config/clickhouse');
+    insertEvents(scored).catch(() => {});
     for (const ev of scored) {
-      await publishEvent(ev).catch(() => {}); // Fire and forget, DLQ handles failures
+      await publishEvent(ev).catch(() => {});
     }
 
     res.status(202).json({

@@ -2,27 +2,14 @@
 
 const router = require('express').Router();
 const { authenticate } = require('../middleware/auth');
+const { getDashboardSummary } = require('../services/clickhouse.service');
 const mock = require('../utils/mockData');
 
-/**
- * @swagger
- * /api/dashboard/summary:
- *   get:
- *     summary: Get dashboard KPI summary
- *     tags: [Dashboard]
- *     security: [{ bearerAuth: [] }]
- *     parameters:
- *       - in: query
- *         name: site_id
- *         schema: { type: string }
- *       - in: query
- *         name: period
- *         schema: { type: string, enum: [1h, 6h, 24h, 7d, 30d] }
- */
 router.get('/summary', authenticate, async (req, res, next) => {
   try {
-    // TODO: Replace with real ClickHouse query when data flows
-    const data = mock.generateMockDashboardSummary();
+    const period = req.query.period || '24h';
+    const siteId = req.query.site_id || 'site-001';
+    const data = await getDashboardSummary(siteId, period);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
