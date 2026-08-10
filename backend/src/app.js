@@ -19,7 +19,7 @@ app.use(helmet({
 }));
 
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
+  origin: true, // Dynamically reflects request origin (e.g. https://taneko.co.id) to support credentials: true
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Site-Id'],
   credentials: true

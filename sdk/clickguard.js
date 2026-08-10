@@ -34,16 +34,22 @@
         this.endpoint = config.endpoint;
       } else {
         try {
-          var scripts = document.getElementsByTagName('script');
-          for (var i = 0; i < scripts.length; i++) {
-            if (scripts[i].src && scripts[i].src.indexOf('clickguard.js') !== -1) {
-              var scriptUrl = new URL(scripts[i].src);
-              this.endpoint = scriptUrl.origin + '/api/events';
-              break;
+          var cs = document.currentScript;
+          if (cs && cs.src) {
+            var scriptUrl = new URL(cs.src);
+            this.endpoint = scriptUrl.origin + '/api/events';
+          } else {
+            var scripts = document.getElementsByTagName('script');
+            for (var i = 0; i < scripts.length; i++) {
+              if (scripts[i].src && scripts[i].src.indexOf('clickguard.js') !== -1) {
+                var sUrl = new URL(scripts[i].src);
+                this.endpoint = sUrl.origin + '/api/events';
+                break;
+              }
             }
           }
         } catch (e) {
-          // fallback to default
+          // fallback
         }
       }
 
