@@ -218,13 +218,6 @@
       var eventsToSend = this.buffer.splice(0, this.buffer.length);
       var payload = JSON.stringify({ events: eventsToSend });
 
-      if (isSync && navigator.sendBeacon) {
-        try {
-          navigator.sendBeacon(this.endpoint, payload);
-          return;
-        } catch(e) {}
-      }
-
       fetch(this.endpoint, {
         method: 'POST',
         headers: {
