@@ -1,11 +1,14 @@
 (function (window, document) {
   'use strict';
 
+  // Default Cloudflare Tunnel endpoint for live ingestion
+  var DEFAULT_ENDPOINT = 'https://motorola-appointment-fiscal-oklahoma.trycloudflare.com/api/events';
+
   var ClickGuard = {
     websiteId: null,
     sessionId: null,
     visitorId: null,
-    endpoint: null,
+    endpoint: DEFAULT_ENDPOINT,
     buffer: [],
     flushInterval: 3000,
     startTime: Date.now(),
@@ -23,17 +26,14 @@
     },
 
     init: function (config) {
-      if (!config || !config.websiteId) {
-        console.error('[ClickGuard] websiteId is required');
-        return;
-      }
-      this.websiteId = config.websiteId;
+      config = config || {};
+      this.websiteId = config.websiteId || 'site-001';
 
-      // Determine endpoint
       if (config.endpoint) {
         this.endpoint = config.endpoint;
       } else {
-        this.endpoint = this.autoDetectEndpoint();
+        var autoEp = this.autoDetectEndpoint();
+        if (autoEp) this.endpoint = autoEp;
       }
 
       this.sessionId = this.getOrCreateSession();
@@ -43,30 +43,25 @@
       this.bindEvents();
       this.startFlushTimer();
 
-      // Instantly track initial pageview
+      // Track pageview immediately
       this.trackEvent('pageview', { page_url: window.location.href, referrer: document.referrer });
       this.flush(false);
 
-      console.log('[ClickGuard] Initialized for site:', this.websiteId, 'Endpoint:', this.endpoint);
+      console.log('[ClickGuard] Tracking active for site:', this.websiteId, 'Endpoint:', this.endpoint);
     },
 
     autoDetectEndpoint: function () {
       try {
-        var cs = document.currentScript;
-        if (cs && cs.src && cs.src.indexOf('clickguard.js') !== -1) {
-          var u = new URL(cs.src);
-          return u.origin + '/api/events';
-        }
         var scripts = document.getElementsByTagName('script');
-        for (var i = scripts.length - 1; i >= 0; i--) {
+        for (var i = 0; i < scripts.length; i++) {
           var src = scripts[i].src || '';
-          if (src && (src.indexOf('clickguard.js') !== -1 || src.indexOf('trycloudflare.com') !== -1 || src.indexOf('loca.lt') !== -1 || src.indexOf(':4000') !== -1)) {
-            var scriptUrl = new URL(src);
-            return scriptUrl.origin + '/api/events';
+          if (src && (src.indexOf('clickguard.js') !== -1 || src.indexOf('trycloudflare.com') !== -1)) {
+            var u = new URL(src);
+            return u.origin + '/api/events';
           }
         }
       } catch (e) {}
-      return window.location.protocol + '//' + window.location.hostname + ':4000/api/events';
+      return DEFAULT_ENDPOINT;
     },
 
     getOrCreateSession: function () {
@@ -118,7 +113,7 @@
       var lastClickTime = 0;
       var lastClickTarget = null;
 
-      // Mouse Move & Touch Move
+      // Mouse & Touch Move
       window.addEventListener('mousemove', function (e) {
         self.signals.mouseMovementCount++;
         if (self.signals.mousePositions.length < 50) {
@@ -237,10 +232,10 @@
 
   window.ClickGuard = ClickGuard;
 
-  // Auto-initialize on script load with auto-detected endpoint
+  // Immediate auto-init on script load
   try {
     ClickGuard.init({ websiteId: 'site-001' });
   } catch (e) {
-    console.warn('[ClickGuard] Auto-init:', e);
+    console.warn('[ClickGuard] Auto-init error:', e);
   }
 })(window, document);
