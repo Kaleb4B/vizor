@@ -1,42 +1,56 @@
 'use strict';
+
 const router = require('express').Router();
 const { authenticate } = require('../middleware/auth');
+const { getGeoData, getDeviceData, getCampaignData } = require('../services/clickhouse.service');
 const mock = require('../utils/mockData');
 
-// GET /api/analytics — full analytics bundle
 router.get('/', authenticate, async (req, res, next) => {
   try {
-    const data = {
-      geo: mock.generateMockGeoData(),
-      device: mock.generateMockDeviceData(),
-      campaign: mock.generateMockCampaignData(),
-    };
-    res.json({ success: true, data });
-  } catch (err) { next(err); }
+    const geo = await getGeoData();
+    const device = await getDeviceData();
+    const campaign = await getCampaignData();
+    res.json({
+      success: true,
+      data: {
+        geo: geo.length > 0 ? geo : mock.generateMockGeoData(),
+        device: device.devices?.length > 0 ? device : mock.generateMockDeviceData(),
+        campaign: campaign.length > 0 ? campaign : mock.generateMockCampaignData(),
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
-// GET /api/analytics/geo — geo breakdown
 router.get('/geo', authenticate, async (req, res, next) => {
   try {
-    const data = mock.generateMockGeoData();
+    const realData = await getGeoData();
+    const data = realData.length > 0 ? realData : mock.generateMockGeoData();
     res.json({ success: true, data });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 });
 
-// GET /api/analytics/device — device, browser, OS breakdown
 router.get('/device', authenticate, async (req, res, next) => {
   try {
-    const data = mock.generateMockDeviceData();
+    const realData = await getDeviceData();
+    const data = realData.devices?.length > 0 ? realData : mock.generateMockDeviceData();
     res.json({ success: true, data });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 });
 
-// GET /api/analytics/campaign — UTM campaign performance
 router.get('/campaign', authenticate, async (req, res, next) => {
   try {
-    const data = mock.generateMockCampaignData();
+    const realData = await getCampaignData();
+    const data = realData.length > 0 ? realData : mock.generateMockCampaignData();
     res.json({ success: true, data });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 });
 
 module.exports = router;
