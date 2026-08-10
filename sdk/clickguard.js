@@ -7,7 +7,7 @@
     visitorId: null,
     endpoint: 'http://localhost:4000/api/events',
     buffer: [],
-    flushInterval: 5000,
+    flushInterval: 3000,
     startTime: Date.now(),
     signals: {
       mouseMovementCount: 0,
@@ -28,24 +28,46 @@
         return;
       }
       this.websiteId = config.websiteId;
-      this.endpoint = config.endpoint || this.endpoint;
+
+      // Auto-detect endpoint from script tag origin if not explicitly provided
+      if (config.endpoint) {
+        this.endpoint = config.endpoint;
+      } else {
+        try {
+          var scripts = document.getElementsByTagName('script');
+          for (var i = 0; i < scripts.length; i++) {
+            if (scripts[i].src && scripts[i].src.indexOf('clickguard.js') !== -1) {
+              var scriptUrl = new URL(scripts[i].src);
+              this.endpoint = scriptUrl.origin + '/api/events';
+              break;
+            }
+          }
+        } catch (e) {
+          // fallback to default
+        }
+      }
+
       this.sessionId = this.getOrCreateSession();
       this.visitorId = this.generateFingerprint();
 
       this.detectAutomation();
       this.bindEvents();
       this.startFlushTimer();
-      this.trackEvent('pageview', { url: window.location.href, referrer: document.referrer });
 
-      console.log('[ClickGuard] Initialized for site:', this.websiteId);
+      // Instantly track initial pageview
+      this.trackEvent('pageview', { page_url: window.location.href, referrer: document.referrer });
+      this.flush(false);
+
+      console.log('[ClickGuard] Initialized for site:', this.websiteId, 'Endpoint:', this.endpoint);
     },
 
     getOrCreateSession: function () {
       var name = 'cg_sid';
-      var sid = sessionStorage.getItem(name);
+      var sid = null;
+      try { sid = sessionStorage.getItem(name); } catch(e) {}
       if (!sid) {
         sid = 'sess_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
-        sessionStorage.setItem(name, sid);
+        try { sessionStorage.setItem(name, sid); } catch(e) {}
       }
       return sid;
     },
@@ -62,7 +84,6 @@
           navigator.deviceMemory || 'unknown'
         ].join('||');
 
-        // Simple Hash
         var hash = 0;
         for (var i = 0; i < str.length; i++) {
           hash = (hash << 5) - hash + str.charCodeAt(i);
@@ -89,7 +110,7 @@
       var lastClickTime = 0;
       var lastClickTarget = null;
 
-      // Mouse Move
+      // Mouse Move & Touch Move
       window.addEventListener('mousemove', function (e) {
         self.signals.mouseMovementCount++;
         if (self.signals.mousePositions.length < 50) {
@@ -97,7 +118,11 @@
         }
       }, { passive: true });
 
-      // Click & Rage Click Detection
+      window.addEventListener('touchmove', function () {
+        self.signals.mouseMovementCount++;
+      }, { passive: true });
+
+      // Click & Touch Click
       window.addEventListener('click', function (e) {
         self.signals.clickCount++;
         var now = Date.now();
@@ -108,10 +133,11 @@
         lastClickTarget = e.target;
 
         self.trackEvent('click', {
-          x_coord: e.clientX,
-          y_coord: e.clientY,
-          target: e.target.tagName
+          x_coord: e.clientX || 0,
+          y_coord: e.clientY || 0,
+          target: e.target ? e.target.tagName : 'BODY'
         });
+        self.flush(false);
       }, { passive: true });
 
       // Scroll Depth
@@ -187,21 +213,24 @@
       var payload = JSON.stringify({ events: eventsToSend });
 
       if (isSync && navigator.sendBeacon) {
-        navigator.sendBeacon(this.endpoint, payload);
-      } else {
-        fetch(this.endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-API-Key': this.websiteId,
-            'X-Site-Id': this.websiteId
-          },
-          body: payload,
-          keepalive: true
-        }).catch(function (err) {
-          console.warn('[ClickGuard] Ingestion retry warning:', err.message);
-        });
+        try {
+          navigator.sendBeacon(this.endpoint, payload);
+          return;
+        } catch(e) {}
       }
+
+      fetch(this.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': this.websiteId,
+          'X-Site-Id': this.websiteId
+        },
+        body: payload,
+        keepalive: true
+      }).catch(function (err) {
+        console.warn('[ClickGuard] Ingestion warning:', err.message);
+      });
     }
   };
 
