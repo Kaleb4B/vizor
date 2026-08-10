@@ -50,7 +50,7 @@ export default function Dashboard() {
     refetchInterval: 5000,
   });
 
-  const { data: alertsData } = useQuery({
+  const { data: alertsData, isLoading: alertsLoading } = useQuery({
     queryKey: ['dashboard-alerts'],
     queryFn: () => dashboardAPI.alerts(),
     refetchInterval: 15000,
@@ -198,13 +198,27 @@ export default function Dashboard() {
           </div>
 
           <div className="space-y-3.5 flex-1 overflow-y-auto pr-1 font-mono">
-            {recentAlerts.length === 0 ? (
+            {alertsLoading ? (
+              // Loading skeleton
               <div className="space-y-2">
                 {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-16" />)}
               </div>
+            ) : recentAlerts.length === 0 ? (
+              // Loaded but no threats — system is clean
+              <div className="flex flex-col items-center justify-center h-48 space-y-3">
+                <div className="w-14 h-14 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                  <ShieldAlert className="w-7 h-7 text-emerald-400" />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-bold text-emerald-300 font-sans">System Clean</p>
+                  <p className="text-xs text-amber-200/40 font-mono mt-1">No active threats detected in last 24h</p>
+                </div>
+                <span className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-full font-mono">● Shield Active</span>
+              </div>
             ) : (
+              // Active threat alerts
               recentAlerts.map((item, idx) => (
-                <div key={idx} className="p-3.5 bg-slate-950/80 border border-amber-500/10 hover:border-amber-500/30 rounded-2xl transition-all duration-200">
+                <div key={`alert-${idx}`} className="p-3.5 bg-slate-950/80 border border-amber-500/10 hover:border-rose-500/30 rounded-2xl transition-all duration-200">
                   <div className="flex items-center justify-between text-xs font-semibold">
                     <span className="text-amber-300 font-mono">{item.type}</span>
                     <span className={`font-bold px-2 py-0.5 rounded-md border text-[11px] ${
@@ -221,6 +235,11 @@ export default function Dashboard() {
                       {item.acknowledged ? '✓ ACK' : '● NEW'}
                     </span>
                   </div>
+                  {item.ip_address && (
+                    <div className="mt-1.5 text-[10px] font-mono text-rose-400/60">
+                      {item.ip_address} · {item.country} · Score: {item.bot_score}/100
+                    </div>
+                  )}
                 </div>
               ))
             )}

@@ -478,33 +478,42 @@ async function getReportsSummary(period = '24h') {
 // 12. Alerts — derived from real anomaly events in ClickHouse
 async function getAlerts() {
   try {
+    // Use HAVING for aggregate conditions (not WHERE)
     const query = `
       SELECT
         toString(ip_address) as ip_address,
-        country,
-        bot_score,
-        is_bot,
-        is_fraud,
-        fraud_reason,
-        anomaly_reason,
-        formatDateTime(timestamp, '%Y-%m-%dT%H:%i:%sZ') as timestamp
+        any(country) as country,
+        max(bot_score) as max_bot_score,
+        countIf(is_bot = 1) as bot_events,
+        countIf(is_fraud = 1) as fraud_events,
+        any(fraud_reason) as fraud_reason,
+        any(anomaly_reason) as anomaly_reason,
+        count() as event_count,
+        formatDateTime(max(timestamp), '%Y-%m-%dT%H:%i:%sZ') as last_seen
       FROM vizor.click_events
-      WHERE (is_bot = 1 OR is_fraud = 1 OR bot_score > 70)
-        AND timestamp >= now() - INTERVAL 24 HOUR
-      ORDER BY timestamp DESC
+      WHERE timestamp >= now() - INTERVAL 7 DAY
+      GROUP BY ip_address
+      HAVING max(bot_score) >= 60 OR countIf(is_bot = 1) > 0 OR countIf(is_fraud = 1) > 0
+      ORDER BY max(timestamp) DESC
       LIMIT 20
     `;
     const rows = await queryClickHouse(query);
-    return rows.map(r => ({
-      type: Number(r.is_fraud) === 1 ? 'FRAUD_DETECTED' : 'BOT_DETECTED',
-      severity: Number(r.bot_score) >= 80 ? 'CRITICAL' : 'HIGH',
-      message: r.fraud_reason || r.anomaly_reason || `${Number(r.is_bot) === 1 ? 'Bot' : 'Fraud'} activity from ${r.ip_address} (${r.country})`,
-      ip_address: r.ip_address,
-      country: r.country,
-      bot_score: Number(r.bot_score),
-      acknowledged: false,
-      timestamp: r.timestamp,
-    }));
+    return rows.map(r => {
+      const isFraud = Number(r.fraud_events) > 0;
+      const isBot = Number(r.bot_events) > 0;
+      const score = Number(r.max_bot_score);
+      return {
+        type: isFraud ? 'FRAUD_DETECTED' : 'BOT_DETECTED',
+        severity: score >= 80 ? 'CRITICAL' : score >= 60 ? 'HIGH' : 'MEDIUM',
+        message: r.fraud_reason || r.anomaly_reason || `${isBot ? 'Bot' : 'Suspicious'} activity from ${r.ip_address} (${r.country}) — ${r.event_count} events`,
+        ip_address: r.ip_address,
+        country: r.country,
+        bot_score: score,
+        event_count: Number(r.event_count),
+        acknowledged: false,
+        timestamp: r.last_seen,
+      };
+    });
   } catch (err) {
     console.error('[ClickHouse] getAlerts error:', err.message);
     return [];
