@@ -1,0 +1,108 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  OWNER
+  VIEWER
+}
+
+enum PlanType {
+  FREE
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+enum AlertType {
+  BOT_SPIKE
+  FRAUD_SPIKE
+  BOUNCE_SPIKE
+  CONVERSION_DROP
+  TRAFFIC_SPIKE
+  DDOS_DETECTED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      UserRole @default(OWNER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sites     Site[]
+  auditLogs AuditLog[]
+
+  @@map("users")
+}
+
+model Site {
+  id        String   @id @default(uuid())
+  name      String
+  domain    String   @unique
+  apiKey    String   @unique @default(uuid())
+  plan      PlanType @default(FREE)
+  isActive  Boolean  @default(true)
+  ownerId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner        User        @relation(fields: [ownerId], references: [id])
+  alertRules   AlertRule[]
+  webhooks     Webhook[]
+
+  @@map("sites")
+}
+
+model AlertRule {
+  id        String    @id @default(uuid())
+  siteId    String
+  type      AlertType
+  threshold Float
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  site Site @relation(fields: [siteId], references: [id])
+
+  @@map("alert_rules")
+}
+
+model Webhook {
+  id         String   @id @default(uuid())
+  siteId     String
+  endpointUrl String
+  secretKey  String
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  site Site @relation(fields: [siteId], references: [id])
+
+  @@map("webhooks")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String
+  resource  String
+  details   Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
