@@ -5,7 +5,7 @@
     websiteId: null,
     sessionId: null,
     visitorId: null,
-    endpoint: 'http://localhost:4000/api/events',
+    endpoint: null,
     buffer: [],
     flushInterval: 3000,
     startTime: Date.now(),
@@ -29,28 +29,11 @@
       }
       this.websiteId = config.websiteId;
 
-      // Auto-detect endpoint from script tag origin if not explicitly provided
+      // Determine endpoint
       if (config.endpoint) {
         this.endpoint = config.endpoint;
       } else {
-        try {
-          var cs = document.currentScript;
-          if (cs && cs.src) {
-            var scriptUrl = new URL(cs.src);
-            this.endpoint = scriptUrl.origin + '/api/events';
-          } else {
-            var scripts = document.getElementsByTagName('script');
-            for (var i = 0; i < scripts.length; i++) {
-              if (scripts[i].src && scripts[i].src.indexOf('clickguard.js') !== -1) {
-                var sUrl = new URL(scripts[i].src);
-                this.endpoint = sUrl.origin + '/api/events';
-                break;
-              }
-            }
-          }
-        } catch (e) {
-          // fallback
-        }
+        this.endpoint = this.autoDetectEndpoint();
       }
 
       this.sessionId = this.getOrCreateSession();
@@ -65,6 +48,25 @@
       this.flush(false);
 
       console.log('[ClickGuard] Initialized for site:', this.websiteId, 'Endpoint:', this.endpoint);
+    },
+
+    autoDetectEndpoint: function () {
+      try {
+        var cs = document.currentScript;
+        if (cs && cs.src && cs.src.indexOf('clickguard.js') !== -1) {
+          var u = new URL(cs.src);
+          return u.origin + '/api/events';
+        }
+        var scripts = document.getElementsByTagName('script');
+        for (var i = scripts.length - 1; i >= 0; i--) {
+          var src = scripts[i].src || '';
+          if (src && (src.indexOf('clickguard.js') !== -1 || src.indexOf('trycloudflare.com') !== -1 || src.indexOf('loca.lt') !== -1 || src.indexOf(':4000') !== -1)) {
+            var scriptUrl = new URL(src);
+            return scriptUrl.origin + '/api/events';
+          }
+        }
+      } catch (e) {}
+      return window.location.protocol + '//' + window.location.hostname + ':4000/api/events';
     },
 
     getOrCreateSession: function () {
@@ -214,7 +216,7 @@
     },
 
     flush: function (isSync) {
-      if (this.buffer.length === 0) return;
+      if (this.buffer.length === 0 || !this.endpoint) return;
       var eventsToSend = this.buffer.splice(0, this.buffer.length);
       var payload = JSON.stringify({ events: eventsToSend });
 
@@ -235,7 +237,7 @@
 
   window.ClickGuard = ClickGuard;
 
-  // Immediate auto-initialization on script load
+  // Auto-initialize on script load with auto-detected endpoint
   try {
     ClickGuard.init({ websiteId: 'site-001' });
   } catch (e) {
