@@ -13,7 +13,7 @@ async function initClickHouse() {
     password: process.env.CLICKHOUSE_PASSWORD || '',
     clickhouse_settings: {
       async_insert: 1,
-      wait_for_async_insert: 0
+      wait_for_async_insert: 1
     }
   });
 

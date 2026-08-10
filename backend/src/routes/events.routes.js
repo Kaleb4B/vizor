@@ -31,7 +31,7 @@ router.post('/', authenticateApiKey, async (req, res, next) => {
         session_id: ev.session_id || `sess_${Date.now()}`,
         visitor_id: ev.visitor_id || `vis_${Date.now()}`,
         event_type: ev.event_type || 'pageview',
-        timestamp: ev.timestamp ? new Date(ev.timestamp).toISOString() : new Date().toISOString(),
+        timestamp: (ev.timestamp ? new Date(ev.timestamp) : new Date()).toISOString().replace('Z', ''),
         page_url: ev.page_url || ev.url || '/',
         referrer: ev.referrer || '',
         ip_address: ev.ip_address || '127.0.0.1',
@@ -64,7 +64,7 @@ router.post('/', authenticateApiKey, async (req, res, next) => {
     });
 
     // Direct insert to ClickHouse & publish to Kafka
-    insertEvents(scored).catch(() => {});
+    await insertEvents(scored).catch(err => console.error('[ClickHouse Insert Error]:', err));
     for (const ev of scored) {
       await publishEvent(ev).catch(() => {});
     }
