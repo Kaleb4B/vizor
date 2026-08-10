@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { dashboardAPI } from '../services/api';
 import { useAppStore } from '../store/useAppStore';
@@ -35,6 +36,7 @@ function formatNum(n) {
 
 export default function Dashboard() {
   const { period, activeSite } = useAppStore();
+  const navigate = useNavigate();
 
   const { data: summaryData, isLoading: summaryLoading } = useQuery({
     queryKey: ['dashboard-summary', period, activeSite?.id],
@@ -88,7 +90,10 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <button className="px-5 py-3 bg-gradient-to-r from-amber-600 via-amber-500 to-yellow-500 hover:from-amber-500 hover:to-yellow-400 text-amber-950 font-bold rounded-2xl shadow-xl shadow-amber-500/20 transition-all duration-200 text-sm flex items-center gap-2 border border-amber-300/40 transform hover:-translate-y-0.5">
+            <button
+              onClick={() => navigate('/live')}
+              className="px-5 py-3 bg-gradient-to-r from-amber-600 via-amber-500 to-yellow-500 hover:from-amber-500 hover:to-yellow-400 text-amber-950 font-bold rounded-2xl shadow-xl shadow-amber-500/20 transition-all duration-200 text-sm flex items-center gap-2 border border-amber-300/40 transform hover:-translate-y-0.5"
+            >
               <Activity className="w-4 h-4 stroke-[2.5]" />
               Stream Live Matrix
             </button>

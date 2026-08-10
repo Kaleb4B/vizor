@@ -45,7 +45,7 @@ export default function LiveVisitors() {
             Live Visitors Feed
             <span className="flex items-center gap-1.5 text-xs bg-amber-500/15 text-amber-300 font-mono font-bold px-3 py-1 rounded-full border border-amber-500/30 animate-pulse-glow">
               <Radio className="w-3.5 h-3.5 text-amber-400" />
-              {activeSignalCount} Active Signals
+              {activeSignalCount} Active Events
             </span>
           </h1>
           <p className="text-sm text-amber-200/50 mt-1 font-sans">
