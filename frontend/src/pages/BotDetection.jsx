@@ -96,7 +96,7 @@ export default function BotDetection() {
               </thead>
               <tbody className="divide-y divide-amber-500/10 font-sans">
                 {botList.map((bot, idx) => (
-                  <tr key={bot.event_id || idx} className="hover:bg-amber-500/5 transition duration-150">
+                  <tr key={`${bot.event_id || bot.ip_address}-${idx}`} className="hover:bg-amber-500/5 transition duration-150">
                     <td className="p-4 font-mono font-semibold text-amber-300">{bot.ip_address}</td>
                     <td className="p-4 font-medium text-amber-100">{bot.bot_type}</td>
                     <td className="p-4 font-mono text-rose-300 text-[11px]">{bot.detection_flags}</td>

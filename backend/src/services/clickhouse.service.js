@@ -292,23 +292,25 @@ async function getBotEvents(limit = 25) {
   try {
     const query = `
       SELECT 
-        toString(event_id) as event_id,
+        toString(any(event_id)) as event_id,
         toString(ip_address) as ip_address,
-        visitor_id,
-        if(bot_type != '', bot_type, 'Automation Framework') as bot_type,
-        bot_score,
-        if(anomaly_reason != '', anomaly_reason, 'CDP Automation Signature') as detection_flags,
-        country,
-        is_datacenter,
-        formatDateTime(timestamp, '%Y-%m-%d %H:%i:%s') as detected_at
+        any(visitor_id) as visitor_id,
+        if(any(bot_type) != '', any(bot_type), 'Automation Framework') as bot_type,
+        max(bot_score) as bot_score,
+        if(any(anomaly_reason) != '', any(anomaly_reason), 'CDP Automation Signature') as detection_flags,
+        any(country) as country,
+        max(is_datacenter) as is_datacenter,
+        count() as request_count,
+        formatDateTime(max(timestamp), '%Y-%m-%d %H:%i:%s') as detected_at
       FROM vizor.click_events
       WHERE is_bot = 1
-      ORDER BY timestamp DESC
+      GROUP BY ip_address
+      ORDER BY max(timestamp) DESC
       LIMIT ${limit}
     `;
     const rows = await queryClickHouse(query);
-    return rows.map(r => ({
-      event_id: r.event_id,
+    return rows.map((r, idx) => ({
+      event_id: r.event_id || `bot_${idx}`,
       ip_address: r.ip_address,
       visitor_id: r.visitor_id,
       bot_type: r.bot_type,
@@ -316,7 +318,7 @@ async function getBotEvents(limit = 25) {
       detection_flags: r.detection_flags,
       country: r.country || 'ID',
       is_datacenter: Number(r.is_datacenter) === 1,
-      request_count: 1,
+      request_count: Number(r.request_count),
       detected_at: r.detected_at,
     }));
   } catch (err) {
